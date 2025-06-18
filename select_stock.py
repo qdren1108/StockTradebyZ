@@ -61,7 +61,7 @@ def load_config(cfg_path: Path) -> List[Dict[str, Any]]:
 
 def instantiate_selector(cfg: Dict[str, Any]):
     """动态加载 Selector 类并实例化"""
-    cls_name: str = cfg.get("class")
+    cls_name: str = cfg.get("class")  # type: ignore
     if not cls_name:
         raise ValueError("缺少 class 字段")
 

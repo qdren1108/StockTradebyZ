@@ -50,7 +50,7 @@ import akshare as ak  # type: ignore
 def _get_mktcap_ak() -> pd.DataFrame:
     """实时快照，列含 code, mktcap (单位: 亿)"""
     df = ak.stock_zh_a_spot_em()
-    df = df[["代码", "总市值"]].rename(columns={"代码": "code", "总市值": "mktcap"})
+    df = df[["代码", "总市值"]].rename(columns={"代码": "code", "总市值": "mktcap"})  # type: ignore
     df["mktcap"] = pd.to_numeric(df["mktcap"], errors="coerce")
     return df
 
@@ -97,7 +97,7 @@ def get_kline(
 
     df = (
         raw[list(COLUMN_MAP_HIST)]
-        .rename(columns=COLUMN_MAP_HIST)
+        .rename(columns=COLUMN_MAP_HIST)  # type: ignore
         .assign(date=lambda x: pd.to_datetime(x["date"]))
     )
     # 数值列统一转 float/int，方便后续处理
@@ -146,9 +146,9 @@ DATA_SOURCE = "akshare"
 
 def validate(df: pd.DataFrame) -> pd.DataFrame:
     df = df.drop_duplicates(subset="date").sort_values("date").reset_index(drop=True)
-    if df["date"].isna().any():
+    if df["date"].isna().any():  # type: ignore
         raise ValueError("存在缺失日期！")
-    if (df["date"] > pd.Timestamp.today()).any():
+    if (df["date"] > pd.Timestamp.today()).any():  # type: ignore
         raise ValueError("数据包含未来日期，可能抓取错误！")
     return df
 

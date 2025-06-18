@@ -31,7 +31,7 @@ def compute_bbi(df: pd.DataFrame) -> pd.Series:
     ma6 = df["close"].rolling(6).mean()
     ma12 = df["close"].rolling(12).mean()
     ma24 = df["close"].rolling(24).mean()
-    return (ma3 + ma6 + ma12 + ma24) / 4
+    return (ma3 + ma6 + ma12 + ma24) / 4  # type: ignore
 
 
 def compute_rsv(
@@ -46,14 +46,14 @@ def compute_rsv(
     low_n = df["low"].rolling(window=n, min_periods=1).min()
     high_close_n = df["close"].rolling(window=n, min_periods=1).max()
     rsv = (df["close"] - low_n) / (high_close_n - low_n + 1e-9) * 100.0
-    return rsv
+    return rsv  # type: ignore
 
 
 def compute_dif(df: pd.DataFrame, fast: int = 12, slow: int = 26) -> pd.Series:
     """计算 MACD 指标中的 DIF (EMA fast - EMA slow)。"""
     ema_fast = df["close"].ewm(span=fast, adjust=False).mean()
     ema_slow = df["close"].ewm(span=slow, adjust=False).mean()
-    return ema_fast - ema_slow
+    return ema_fast - ema_slow  # type: ignore
 
 
 def bbi_deriv_uptrend(
@@ -116,7 +116,7 @@ class BBIKDJSelector:
 
         # 1. BBI 必须整体上升
         if not bbi_deriv_uptrend(
-            hist["BBI"],
+            hist["BBI"],  # type: ignore
             offset_n=self.bbi_offset_n,
             min_window=self.bbi_min_window,
             max_window=self.max_window,
@@ -124,13 +124,13 @@ class BBIKDJSelector:
             return False
 
         # 2. 日线 J 值
-        j_today = float(compute_kdj(hist).iloc[-1]["J"])
+        j_today = float(compute_kdj(hist).iloc[-1]["J"])  # type: ignore
         if j_today >= self.threshold:
             return False
 
         # 3. MACD 中 DIF>0
         hist["DIF"] = compute_dif(hist)
-        if hist["DIF"].iloc[-1] <= 0:
+        if hist["DIF"].iloc[-1] <= 0:  # type: ignore
             return False
 
         return True
@@ -145,7 +145,7 @@ class BBIKDJSelector:
             if hist.empty:
                 continue
             hist = hist.tail(self.max_window + self.bbi_offset_n + 5)  # 再多保留一点缓冲
-            if self._passes_filters(hist):
+            if self._passes_filters(hist):  # type: ignore
                 picks.append(code)
         return picks
 
@@ -190,7 +190,7 @@ class BBIShortLongSelector:
         hist["BBI"] = compute_bbi(hist)
 
         if not bbi_deriv_uptrend(
-            hist["BBI"],
+            hist["BBI"],  # type: ignore
             offset_n=self.bbi_offset_n,
             min_window=self.bbi_min_window,
             max_window=self.max_window,
@@ -216,7 +216,7 @@ class BBIShortLongSelector:
 
         # 3. MACD 中 DIF>0 --------------
         hist["DIF"] = compute_dif(hist)
-        return hist["DIF"].iloc[-1] > 0
+        return hist["DIF"].iloc[-1] > 0  # type: ignore
 
     # ---------- 多股票批量 ---------- #
     def select(
@@ -238,6 +238,6 @@ class BBIShortLongSelector:
                 + self.m
             )
             hist = hist.tail(max(need_len, self.max_window))
-            if self._passes_filters(hist):
+            if self._passes_filters(hist):  # type: ignore
                 picks.append(code)
         return picks
