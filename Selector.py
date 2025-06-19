@@ -1,5 +1,4 @@
 from typing import Dict, List
-import re
 
 import numpy as np
 import pandas as pd
@@ -55,50 +54,6 @@ def compute_dif(df: pd.DataFrame, fast: int = 12, slow: int = 26) -> pd.Series:
     ema_fast = df["close"].ewm(span=fast, adjust=False).mean()
     ema_slow = df["close"].ewm(span=slow, adjust=False).mean()
     return ema_fast - ema_slow  # type: ignore
-
-
-#  补票策略的算法优化
-def detect_wave_pattern(short_series: pd.Series, m: int) -> bool:
-    """
-    检测短期RSV序列中的波动模式
-    
-    Parameters
-    ----------
-    short_series : pd.Series
-        短期RSV序列
-    m : int
-        检测窗口大小
-        
-    Returns
-    -------
-    bool
-        是否匹配任一模式
-    """
-    vals = short_series.iloc[-m:].fillna(-1).values 
-    
-    # 建议1：处理可能的NaN值
-    vals = np.nan_to_num(vals, nan=-1)  # 将NaN转为-1
-    
-    # 建议2：更精细的特征编码
-    seq = ''.join([
-        'H' if x >= 80 else    # 高
-        'V' if x >= 60 else    # 次高(60-80) 
-        'L' if x <= 40 else    # 低
-        'M' for x in vals      # 中(40-60)
-        
-    ])
-    
-    # 建议3：增强版模式定义
-    patterns = [
-        r'H.L.H',       # 标准V形（去掉^$以允许前后有其他值）
-        r'H.V.H',       # 次高中间值
-        r'H.M.H',       # 宽松中间值
-        r'H.H.L.H',     # 延迟V形
-        r'H.L.H.H',     # 新增：覆盖第二种情况
-        r'HL.H'         # 新增：覆盖部分缺失数据情况
-    ]
-    
-    return any(re.search(p, seq) for p in patterns)
 
 
 def bbi_deriv_uptrend(
@@ -193,7 +148,7 @@ class BBIKDJSelector:
             if self._passes_filters(hist):  # type: ignore
                 picks.append(code)
         return picks
-    
+
 
 
 class BBIShortLongSelector:
@@ -250,14 +205,13 @@ class BBIShortLongSelector:
             return False                                          # 数据不足
 
         win = hist.iloc[-self.m :]                                # 最近 m 天
+        long_ok = (win["RSV_long"] >= 80).all()                   # 长期 ≥ 80
 
-        if not (
-            # 长期条件
-            (win["RSV_long"] >= 70).all() and
-            (win["RSV_long"].iloc[-3:] >= 80).sum() >= 2 and
-            # 短期波动
-            detect_wave_pattern(win["RSV_short"], self.m)
-        ):
+        short_series = win["RSV_short"]
+        short_start_end_ok = short_series.iloc[0] >= 80 and short_series.iloc[-1] >= 80
+        short_has_below_20 = (short_series < 20).any()
+
+        if not (long_ok and short_start_end_ok and short_has_below_20):
             return False
 
         # 3. MACD 中 DIF>0 --------------
